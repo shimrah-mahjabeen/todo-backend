@@ -1,6 +1,8 @@
 import express, { Request, Response, Router } from "express";
 import prisma from "../prisma";
 
+const Fuse = require("fuse.js");
+
 const router: Router = express.Router();
 
 // GET /tasks - Fetch all tasks
@@ -78,5 +80,27 @@ router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: "Failed to delete task" });
   }
 });
+
+router.get("/search", async (req: Request, res: Response): Promise<void> => {
+  const { query } = req.query;
+  console.log("Query:", query);
+  
+  try {
+    const tasks = await prisma.task.findMany();
+    const options = {
+      keys:["title"],
+      threshold: 0.3,
+    };
+    const fuse = new Fuse(tasks, options);
+    const results = fuse.search((query)).map((result: { item: any; }) => result.item);
+    console.log(results);
+    
+    res.status(200).json(results);
+    }
+    catch (error) {
+    console.error("Error searching tasks:", error);
+    res.status(500).json({ error: "Failed to search tasks" });
+  }
+})
 
 export default router;
